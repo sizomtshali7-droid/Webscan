@@ -30,8 +30,8 @@ Python packages (listed in `requirements.txt`): `requests` and `Flask`.
 **1. Get the code**
 
 ```bash
-git clone https://github.com/<your-username>/webscan.git
-cd webscan
+git clone https://github.com/sizomtshali7-droid/Webscan.git
+cd Webscan
 ```
 
 **2. Create a virtual environment (recommended)**
