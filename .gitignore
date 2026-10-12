@@ -1,0 +1,15 @@
+# Virtual environment and Python cache
+.venv/
+__pycache__/
+*.pyc
+
+# Installers and downloads (large files that do not belong in the repository)
+*.exe
+*.msi
+
+# Default scan output (the saved evidence reports live in reports/ and ARE committed)
+webscan_report.md
+
+# Local settings
+.env
+.vscode/

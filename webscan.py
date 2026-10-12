@@ -347,14 +347,13 @@ class Scanner(object):
 
         # R3: replies do not contain passwords or secrets
         name = "Replies do not contain passwords or secrets"
-        found = []
+        found = set()
         for body in self.bodies:
-            m = SECRET_PATTERN.search(body)
-            if m:
-                found.append(m.group(0).strip())
+            for m in SECRET_PATTERN.finditer(body):
+                found.add(m.group(0).strip().strip("\"':= "))
         if found:
             self.add(GROUP_RESPONSES, name, FAIL,
-                     "Found private-looking fields in replies: %s" % ", ".join(sorted(set(found))),
+                     "Found private-looking fields in replies: %s" % ", ".join(sorted(found)),
                      "Never send passwords, keys or secrets to the browser. Remove those fields "
                      "from the reply.")
         else:
