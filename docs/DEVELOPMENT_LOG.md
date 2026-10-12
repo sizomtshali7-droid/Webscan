@@ -33,7 +33,7 @@ Week 2, Design and Initial Development. This log records how Webscan was set up 
 
 **What happened.** The Python download from python.org was not supported on my Windows 10 version (1709, build 16299). The version shows in the title line of the first screenshot.
 
-**Fix.** I used a standalone Python 3.14.8 (64-bit) installer instead. The screenshot shows its **Optional Features** step. I kept **pip** ticked because pip is what installs Flask and Requests, and I also looked at the **py launcher** option, which gives the `py` command.
+**Fix.** I used a standalone Python 3.14.8 (64-bit) installer instead. The screenshot shows its **Optional Features** step. I kept **pip** ticked because pip is what installs Flask and Requests, and I also ticked the **py launcher** option, which gives the `py` command.
 
 ![Python installer, optional features](../screenshots/02-python-installer-options.png)
 
