@@ -1,12 +1,10 @@
 # Webscan: Design Document
 
 **Project:** Webscan, a small Python tool that checks a website and its API for common weaknesses
-**Stage:** Week 2, Design and Initial Development
-**Follows from:** Week 1, Problem Identification and Research
 
 ## 1. Purpose and scope
 
-Week 1 found that broken access control and security misconfiguration are among the most common website risks (OWASP Top 10, 2025), and that settings checkers do not test who can see what, while permission testing needs specialist tools or skills.
+Broken access control and security misconfiguration are among the most common website risks (OWASP Top 10, 2025), settings checkers do not test who can see what, while permission testing needs specialist tools or skills.
 
 Webscan is a small, easy-to-run tool that combines both kinds of checks:
 
