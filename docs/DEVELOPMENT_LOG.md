@@ -64,22 +64,6 @@ Afterwards `python -c "import requests, flask; print('ok')"` printed `ok` and `p
 
 The README now uses `python -m pip` everywhere.
 
-### Problem 4: Renaming the weak report failed
-
-**What happened.** After the weak scan I tried `ren webscan_report.md report_weak.md` and got `The system cannot find the file specified`.
-
-**Cause.** There was no file called `webscan_report.md` any more. File Explorer showed the weak report already saved as `webscan_report_weak` (an MD file dated 15:04, the time of the scan), so it had already been renamed.
-
-**Result.** Nothing was lost. I then scanned the fixed version with `--report webscan_report_fixed.md` so the two reports have matching names. `run_demo.py` now does this automatically and saves both in a `reports/` folder.
-
-At that point my project folder also contained the 32 MB Python installer and the `.venv` folder, which must **not** go on GitHub. A `.gitignore` file now covers both.
-
-### Problem 5: README said PowerShell, I used Command Prompt
-
-**What happened.** The README labelled the Windows steps "PowerShell", but all my screenshots are from Command Prompt (`cmd.exe`). The commands are the same for this project, so it still worked.
-
-**Fix.** The README now says "Command Prompt or PowerShell". If PowerShell refuses to run the activate script, use Command Prompt.
-
 ### Problem 6: The fixed site failed one check (found during testing)
 
 **What happened.** On the first test, the fixed practice site passed 15 checks and failed "Server version is hidden". The report showed two `Server` headers, one set by the practice app and one added by Flask's built-in server (`Werkzeug/... Python/...`).
