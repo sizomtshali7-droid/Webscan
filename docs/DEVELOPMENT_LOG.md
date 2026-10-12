@@ -68,15 +68,11 @@ The README now uses `python -m pip` everywhere.
 
 **What happened.** After the weak scan I tried `ren webscan_report.md report_weak.md` and got `The system cannot find the file specified`.
 
-![rename error](../screenshots/13-rename-command-error.png)
-
-**Cause.** There was no file called `webscan_report.md` any more. File Explorer shows the weak report already saved as `webscan_report_weak` (an MD file dated 15:04, the time of the scan), so it had already been renamed.
-
-![report files in the project folder](../screenshots/12-report-files-in-project-folder.png)
+**Cause.** There was no file called `webscan_report.md` any more. File Explorer showed the weak report already saved as `webscan_report_weak` (an MD file dated 15:04, the time of the scan), so it had already been renamed.
 
 **Result.** Nothing was lost. I then scanned the fixed version with `--report webscan_report_fixed.md` so the two reports have matching names. `run_demo.py` now does this automatically and saves both in a `reports/` folder.
 
-The same screenshot also shows the files that must **not** go on GitHub: the 32 MB Python installer and the `.venv` folder. A `.gitignore` file now covers both.
+At that point my project folder also contained the 32 MB Python installer and the `.venv` folder, which must **not** go on GitHub. A `.gitignore` file now covers both.
 
 ### Problem 5: README said PowerShell, I used Command Prompt
 
@@ -115,8 +111,6 @@ The same screenshot also shows the files that must **not** go on GitHub: the 32 
 - The README published on GitHub:
 
 ![README install section](../screenshots/05-github-readme-install-section.png)
-![README usage and options](../screenshots/14-github-readme-usage-and-options.png)
-![README project files and limits](../screenshots/15-github-readme-project-files-and-limits.png)
 
 ## Housekeeping
 
