@@ -1,6 +1,6 @@
 # Webscan: Design Document
 
-**Project:** Webscan, a small Python tool that checks a website and its API for common weaknesses
+**Project:** Webscan, a small Python tool that checks a website and its API for common weaknesses.
 
 ## 1. Purpose and scope
 
