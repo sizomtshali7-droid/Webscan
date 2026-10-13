@@ -64,19 +64,19 @@ Afterwards `python -c "import requests, flask; print('ok')"` printed `ok` and `p
 
 The README now uses `python -m pip` everywhere.
 
-### Problem 6: The fixed site failed one check (found during testing)
+### Problem 4: The fixed site failed one check (found during testing)
 
 **What happened.** On the first test, the fixed practice site passed 15 checks and failed "Server version is hidden". The report showed two `Server` headers, one set by the practice app and one added by Flask's built-in server (`Werkzeug/... Python/...`).
 
 **Fix.** In fixed mode the practice site now uses a small custom request handler that replaces the server's version string. After that the fixed site passed all 16 checks.
 
-### Problem 7: 14 checks in Week 1 versus 16
+### Problem 5: 14 checks in Week 1 versus 16
 
 **What happened.** The Week 1 text describes five header settings plus the version check, two cookie protections, three access checks and three response checks, which is 14, but it also says 16 checks and "the weak version fails 15 of the 16".
 
 **Resolution.** To reach 16, the cookie check became three checks (HttpOnly, Secure, SameSite) and a fourth access check was added (the admin page needs a login). The weak site passes only that check, so it fails 15 of 16. See section 5 of `DESIGN.md`.
 
-### Problem 8: The secrets check named only one leaked field
+### Problem 6: The secrets check named only one leaked field
 
 **What happened.** In the weak scan, the replies contained both `owner_password` and `internal_api_key`, but the report listed only `internal_api_key`.
 
