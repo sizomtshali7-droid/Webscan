@@ -12,8 +12,10 @@ add --i-have-permission.
 import argparse
 import datetime
 import ipaddress
+import json
 import re
 import sys
+import uuid
 from urllib.parse import urlparse
 
 import requests
@@ -26,7 +28,7 @@ GROUP_ACCESS = "Access"
 GROUP_RESPONSES = "Responses"
 GROUP_ORDER = [GROUP_HEADERS, GROUP_COOKIES, GROUP_ACCESS, GROUP_RESPONSES]
 
-PASS, FAIL, SKIP = "PASS", "FAIL", "SKIPPED"
+PASS, FAIL, SKIP, INCONCLUSIVE = "PASS", "FAIL", "SKIPPED", "INCONCLUSIVE"
 
 # A reply with these "key: value" words may be leaking private data.
 SECRET_PATTERN = re.compile(
@@ -72,9 +74,33 @@ def is_local(url):
         return False
 
 
-def get(url, cookie=None, **kwargs):
-    headers = {"Cookie": cookie} if cookie else {}
-    return requests.get(url, headers=headers, timeout=TIMEOUT, allow_redirects=False, **kwargs)
+def get(url, cookie=None, headers=None, **kwargs):
+    sent = dict(headers or {})
+    if cookie:
+        sent["Cookie"] = cookie
+    return requests.get(url, headers=sent, timeout=TIMEOUT, allow_redirects=False, **kwargs)
+
+
+def page_fingerprint(text):
+    """A short, whitespace-free copy of a page, used to tell if two pages are the same."""
+    return " ".join(str(text).split())[:1500]
+
+
+def find_key(data, wanted):
+    """Look for a key (like 'token') anywhere inside a JSON reply."""
+    if isinstance(data, dict):
+        for key, value in data.items():
+            if key.lower() == wanted:
+                return value
+            found = find_key(value, wanted)
+            if found is not None:
+                return found
+    elif isinstance(data, list):
+        for item in data:
+            found = find_key(item, wanted)
+            if found is not None:
+                return found
+    return None
 
 
 def set_cookie_headers(resp):
@@ -94,7 +120,8 @@ def cookie_header_from(set_cookies):
 
 class Scanner(object):
     def __init__(self, base_url, user1, order1, order2,
-                 login_path, orders_path, admin_path):
+                 login_path, orders_path, admin_path,
+                 login_field="username", auth="cookie"):
         self.base = base_url.rstrip("/")
         self.user1 = user1  # (username, password)
         self.order1 = order1
@@ -106,6 +133,11 @@ class Scanner(object):
         self.bodies = []          # every reply body we saw (for the secrets check)
         self.login_set_cookies = []
         self.cookie1 = None       # logged-in cookie for user 1
+        self.login_field = login_field  # name of the login field ("username" or "email")
+        self.auth = auth          # "cookie" or "bearer" (token in the login reply)
+        self.token = None         # logged-in token for user 1 (bearer mode)
+        self.login_note = ""      # short message about how the login went
+        self.catch_all = None     # what the website shows for pages that do not exist
 
     def url(self, path):
         return self.base + path
@@ -121,7 +153,7 @@ class Scanner(object):
     def login(self, username, password):
         return requests.post(
             self.url(self.login_path),
-            json={"username": username, "password": password},
+            json={self.login_field: username, "password": password},
             timeout=TIMEOUT, allow_redirects=False,
         )
 
@@ -130,10 +162,60 @@ class Scanner(object):
             resp = self.login(*self.user1)
             self.note_body(resp)
             self.login_set_cookies = set_cookie_headers(resp)
-            if resp.status_code == 200 and self.login_set_cookies:
-                self.cookie1 = cookie_header_from(self.login_set_cookies)
+            if self.auth == "bearer":
+                try:
+                    data = resp.json()
+                except ValueError:
+                    data = None
+                token = find_key(data, "token")
+                if resp.status_code == 200 and token:
+                    self.token = str(token)
+                    bid = find_key(data, "bid")
+                    self.login_note = "Logged in with a token."
+                    if bid is not None:
+                        self.login_note += " (This user's basket id is %s.)" % bid
+                else:
+                    self.login_note = "Login failed (status %d)." % resp.status_code
+            else:
+                if resp.status_code == 200 and self.login_set_cookies:
+                    self.cookie1 = cookie_header_from(self.login_set_cookies)
+                else:
+                    self.login_note = "Login failed or set no cookie (status %d)." % resp.status_code
+        except requests.RequestException as err:
+            self.login_note = "Login request failed: %s" % err
+
+    @property
+    def logged_in(self):
+        return bool(self.cookie1 or self.token)
+
+    def auth_get(self, url):
+        """A GET request as the logged-in user (cookie or token)."""
+        if self.token:
+            return get(url, headers={"Authorization": "Bearer %s" % self.token})
+        return get(url, cookie=self.cookie1)
+
+    # ---- single-page apps and server errors ------------------------------
+
+    def find_catch_all(self):
+        """Ask for a page that cannot exist. Single-page apps answer 200 with their normal page."""
+        try:
+            r = get(self.url("/webscan-no-such-page-%s" % uuid.uuid4().hex[:8]))
+            if r.status_code == 200:
+                self.catch_all = page_fingerprint(r.text)
         except requests.RequestException:
             pass
+
+    def unclear(self, r):
+        """Return a reason if a reply cannot be trusted as a yes or no answer, else None."""
+        if r.status_code == 200 and self.catch_all and page_fingerprint(r.text) == self.catch_all:
+            return ("The website answered with its normal home page, so this address is not a "
+                    "real page or API address (typical for single-page apps). "
+                    "Try a real address with the matching --*-path option.")
+        if r.status_code >= 500:
+            return ("The website answered with a server error (status %d), so the address may not "
+                    "exist or the server failed. This does not show if a login is needed."
+                    % r.status_code)
+        return None
 
     # ---- group 1: settings and headers -----------------------------------
 
@@ -239,7 +321,10 @@ class Scanner(object):
         try:
             r = get(order1_url)
             self.note_body(r)
-            if r.status_code in REDIRECT_OR_DENIED:
+            why = self.unclear(r)
+            if why:
+                self.add(GROUP_ACCESS, "Orders need a login", INCONCLUSIVE, why, "")
+            elif r.status_code in REDIRECT_OR_DENIED:
                 self.add(GROUP_ACCESS, "Orders need a login", PASS, "Without logging in, got status %d." % r.status_code, "")
             else:
                 self.add(GROUP_ACCESS, "Orders need a login", FAIL,
@@ -249,11 +334,14 @@ class Scanner(object):
             self.add(GROUP_ACCESS, "Orders need a login", SKIP, "Request failed: %s" % err, "")
 
         # A2: one user cannot read another user's order
-        if self.cookie1:
+        if self.logged_in:
             try:
-                r = get(order2_url, cookie=self.cookie1)
+                r = self.auth_get(order2_url)
                 self.note_body(r)
-                if r.status_code == 200:
+                why = self.unclear(r)
+                if why:
+                    self.add(GROUP_ACCESS, "Users cannot read other users' orders", INCONCLUSIVE, why, "")
+                elif r.status_code == 200:
                     self.add(GROUP_ACCESS, "Users cannot read other users' orders", FAIL,
                              "%s asked for order %s (not theirs) and got status 200: %s"
                              % (self.user1[0], self.order2, short(r.text)),
@@ -269,11 +357,14 @@ class Scanner(object):
                      "Could not log in as %s." % self.user1[0], "")
 
         # A3: a normal user cannot open the admin page
-        if self.cookie1:
+        if self.logged_in:
             try:
-                r = get(admin_url, cookie=self.cookie1)
+                r = self.auth_get(admin_url)
                 self.note_body(r)
-                if r.status_code in REDIRECT_OR_DENIED:
+                why = self.unclear(r)
+                if why:
+                    self.add(GROUP_ACCESS, "Normal users cannot open the admin page", INCONCLUSIVE, why, "")
+                elif r.status_code in REDIRECT_OR_DENIED:
                     self.add(GROUP_ACCESS, "Normal users cannot open the admin page", PASS,
                              "A normal user got status %d." % r.status_code, "")
                 else:
@@ -292,7 +383,10 @@ class Scanner(object):
         try:
             r = get(admin_url)
             self.note_body(r)
-            if r.status_code in REDIRECT_OR_DENIED:
+            why = self.unclear(r)
+            if why:
+                self.add(GROUP_ACCESS, "The admin page needs a login", INCONCLUSIVE, why, "")
+            elif r.status_code in REDIRECT_OR_DENIED:
                 self.add(GROUP_ACCESS, "The admin page needs a login", PASS,
                          "Without logging in, got status %d." % r.status_code, "")
             else:
@@ -327,9 +421,9 @@ class Scanner(object):
 
         # R2: error pages do not show internal details
         name = "Error pages do not show internal details"
-        if self.cookie1:
+        if self.logged_in:
             try:
-                r = get(self.url("%s/not-a-number" % self.orders_path), cookie=self.cookie1)
+                r = self.auth_get(self.url("%s/not-a-number" % self.orders_path))
                 self.note_body(r)
                 hit = INTERNALS_PATTERN.search(r.text)
                 if hit:
@@ -364,6 +458,12 @@ class Scanner(object):
 
     def run(self):
         self.do_login_user1()
+        if not self.logged_in:
+            print("Warning: could not log in as %s. %s Checks that need a login will be skipped."
+                  % (self.user1[0], self.login_note))
+        elif self.login_note:
+            print(self.login_note)
+        self.find_catch_all()
         self.check_headers()
         self.check_cookies()
         self.check_access()
@@ -376,17 +476,20 @@ class Scanner(object):
 # Report
 # --------------------------------------------------------------------------
 
-def build_report(target, results):
+def build_report(target, results, name=None):
     passed = sum(1 for r in results if r.status == PASS)
     failed = sum(1 for r in results if r.status == FAIL)
     skipped = sum(1 for r in results if r.status == SKIP)
+    unclear = sum(1 for r in results if r.status == INCONCLUSIVE)
     lines = []
     lines.append("# Webscan report")
     lines.append("")
+    if name:
+        lines.append("- Name: %s" % name)
     lines.append("- Target: %s" % target)
     lines.append("- Date: %s" % datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
-    lines.append("- Result: %d passed, %d failed, %d skipped (out of %d checks)"
-                 % (passed, failed, skipped, len(results)))
+    lines.append("- Result: %d passed, %d failed, %d skipped, %d inconclusive (out of %d checks)"
+                 % (passed, failed, skipped, unclear, len(results)))
     lines.append("")
     lines.append("A passing report does not mean a website is fully secure. "
                  "Webscan only checks a short list of well-known weaknesses.")
@@ -401,8 +504,25 @@ def build_report(target, results):
                 lines.append("    - How to fix it: %s" % r.fix)
             elif r.status == SKIP:
                 lines.append("    - Why skipped: %s" % r.seen)
+            elif r.status == INCONCLUSIVE:
+                lines.append("    - Why inconclusive: %s" % r.seen)
         lines.append("")
     return "\n".join(lines), failed
+
+
+def build_json(target, results, name=None):
+    """The same results as the text report, in a form other tools can read."""
+    counts = {}
+    for r in results:
+        counts[r.status] = counts.get(r.status, 0) + 1
+    return json.dumps({
+        "name": name,
+        "target": target,
+        "date": datetime.datetime.now().isoformat(timespec="seconds"),
+        "summary": counts,
+        "checks": [{"group": r.group, "name": r.name, "status": r.status,
+                    "seen": r.seen, "fix": r.fix} for r in results],
+    }, indent=2)
 
 
 def parse_user(text):
@@ -425,6 +545,12 @@ def main():
     p.add_argument("--login-path", default="/api/login")
     p.add_argument("--orders-path", default="/api/orders")
     p.add_argument("--admin-path", default="/admin")
+    p.add_argument("--login-field", default="username",
+                   help="name of the user field in the login request (default username; Juice Shop uses email)")
+    p.add_argument("--auth", choices=["cookie", "bearer"], default="cookie",
+                   help="how the website keeps you logged in: cookie (default) or bearer token in the login reply")
+    p.add_argument("--name", default=None, help="a label for this website, shown in the report")
+    p.add_argument("--json", default=None, metavar="FILE", help="also write the results to a JSON file")
     p.add_argument("--report", default="webscan_report.md", help="file to write the report to")
     args = p.parse_args()
 
@@ -441,18 +567,23 @@ def main():
 
     print("Scanning %s ..." % args.target)
     scanner = Scanner(args.target, args.user1, args.order1, args.order2,
-                      args.login_path, args.orders_path, args.admin_path)
+                      args.login_path, args.orders_path, args.admin_path,
+                      login_field=args.login_field, auth=args.auth)
     try:
         results = scanner.run()
     except requests.RequestException as err:
         print("Error: could not reach the website: %s" % err)
         return 2
 
-    report, failed = build_report(args.target, results)
+    report, failed = build_report(args.target, results, args.name)
     print(report)
     with open(args.report, "w", encoding="utf-8") as f:
         f.write(report + "\n")
     print("\nReport saved to %s" % args.report)
+    if args.json:
+        with open(args.json, "w", encoding="utf-8") as f:
+            f.write(build_json(args.target, results, args.name) + "\n")
+        print("JSON results saved to %s" % args.json)
     return 1 if failed else 0
 
 

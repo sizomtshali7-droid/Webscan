@@ -1,0 +1,124 @@
+{
+  "name": "OWASP Juice Shop (real API paths)",
+  "target": "http://127.0.0.1:3000",
+  "date": "2026-10-19T13:20:22",
+  "summary": {
+    "FAIL": 6,
+    "PASS": 7,
+    "SKIPPED": 3
+  },
+  "checks": [
+    {
+      "group": "Settings and headers",
+      "name": "Content-Security-Policy is set",
+      "status": "FAIL",
+      "seen": "Header 'Content-Security-Policy' is missing.",
+      "fix": "Add a Content-Security-Policy header. It tells the browser which sources of scripts and images are allowed, which helps stop injected code. A simple start is: default-src 'self'."
+    },
+    {
+      "group": "Settings and headers",
+      "name": "Strict-Transport-Security is set",
+      "status": "FAIL",
+      "seen": "Header 'Strict-Transport-Security' is missing.",
+      "fix": "Add a Strict-Transport-Security header (for example max-age=31536000) so browsers always use the secure https version of the website."
+    },
+    {
+      "group": "Settings and headers",
+      "name": "X-Content-Type-Options is nosniff",
+      "status": "PASS",
+      "seen": "X-Content-Type-Options: nosniff",
+      "fix": ""
+    },
+    {
+      "group": "Settings and headers",
+      "name": "Clickjacking protection is set",
+      "status": "PASS",
+      "seen": "X-Frame-Options: SAMEORIGIN",
+      "fix": ""
+    },
+    {
+      "group": "Settings and headers",
+      "name": "Referrer-Policy is set",
+      "status": "FAIL",
+      "seen": "Header 'Referrer-Policy' is missing.",
+      "fix": "Add a Referrer-Policy header (for example no-referrer) so your web addresses are not leaked to other websites."
+    },
+    {
+      "group": "Settings and headers",
+      "name": "Server version is hidden",
+      "status": "PASS",
+      "seen": "No version number found in Server or X-Powered-By.",
+      "fix": ""
+    },
+    {
+      "group": "Cookies",
+      "name": "Cookies are HttpOnly",
+      "status": "SKIPPED",
+      "seen": "No cookie was seen. The login did not work or the website sets no cookie.",
+      "fix": ""
+    },
+    {
+      "group": "Cookies",
+      "name": "Cookies are Secure",
+      "status": "SKIPPED",
+      "seen": "No cookie was seen. The login did not work or the website sets no cookie.",
+      "fix": ""
+    },
+    {
+      "group": "Cookies",
+      "name": "Cookies have SameSite",
+      "status": "SKIPPED",
+      "seen": "No cookie was seen. The login did not work or the website sets no cookie.",
+      "fix": ""
+    },
+    {
+      "group": "Access",
+      "name": "Orders need a login",
+      "status": "PASS",
+      "seen": "Without logging in, got status 401.",
+      "fix": ""
+    },
+    {
+      "group": "Access",
+      "name": "Users cannot read other users' orders",
+      "status": "FAIL",
+      "seen": "test@example.com asked for order 1 (not theirs) and got status 200: {\"status\":\"success\",\"data\":{\"id\":1,\"coupon\":null,\"UserId\":1,\"createdAt\":\"2026-10-19T10:15:48.492Z\",\"updatedAt\":\"2026-10-19T10:15:48.492Z\",\"Products\":[{\"id\":1,\"name\":\"Apple Juice (1000ml)\",\"description...",
+      "fix": "On every request, check that the order belongs to the logged-in user (not just that the user is logged in). Return 403 or 404 otherwise."
+    },
+    {
+      "group": "Access",
+      "name": "Normal users cannot open the admin page",
+      "status": "FAIL",
+      "seen": "test@example.com (a normal user) opened the admin page: status 200, {\"config\":{\"server\":{\"port\":3000,\"basePath\":\"\",\"baseUrl\":\"http://localhost:3000\"},\"application\":{\"domain\":\"juice-sh.op\",\"name\":\"OWASP Juice Shop\",\"logo\":\"JuiceShop_Logo.png\",\"favicon\":\"favicon_js.ico\"...",
+      "fix": "Check the user's role on the server before showing any admin page. Hiding the link is not enough."
+    },
+    {
+      "group": "Access",
+      "name": "The admin page needs a login",
+      "status": "FAIL",
+      "seen": "Without logging in, got status 200: {\"config\":{\"server\":{\"port\":3000,\"basePath\":\"\",\"baseUrl\":\"http://localhost:3000\"},\"application\":{\"domain\":\"juice-sh.op\",\"name\":\"OWASP Juice Shop\",\"logo\":\"JuiceShop_Logo.png\",\"favicon\":\"favicon_js.ico\"...",
+      "fix": "Require a login before showing the admin page."
+    },
+    {
+      "group": "Responses",
+      "name": "Login errors do not reveal which users exist",
+      "status": "PASS",
+      "seen": "Both bad logins got the same reply: Invalid email or password.",
+      "fix": ""
+    },
+    {
+      "group": "Responses",
+      "name": "Error pages do not show internal details",
+      "status": "PASS",
+      "seen": "A bad request got status 200 with no internal details.",
+      "fix": ""
+    },
+    {
+      "group": "Responses",
+      "name": "Replies do not contain passwords or secrets",
+      "status": "PASS",
+      "seen": "Checked 8 replies. No password or secret fields found.",
+      "fix": ""
+    }
+  ]
+}

@@ -1,8 +1,8 @@
 # Webscan report
 
 - Target: http://127.0.0.1:5050
-- Date: 2026-10-12 11:51
-- Result: 1 passed, 15 failed, 0 skipped (out of 16 checks)
+- Date: 2026-10-19 13:31
+- Result: 1 passed, 15 failed, 0 skipped, 0 inconclusive (out of 16 checks)
 
 A passing report does not mean a website is fully secure. Webscan only checks a short list of well-known weaknesses.
 
@@ -58,7 +58,7 @@ A passing report does not mean a website is fully secure. Webscan only checks a 
     - What was seen: Unknown user: 401 {"error":"No such user: no_such_user_xyz"} | Real user, wrong password: 401 {"error":"Wrong password for alice"}
     - How to fix it: Give the same error for an unknown user and a wrong password, for example 'Invalid username or password'.
 - [FAIL] Error pages do not show internal details
-    - What was seen: A bad request (status 500) showed internal details: <pre>Traceback (most recent call last): File "C:\Users\king7\Desktop\Sizo\CyberFox\Design and Initial Development\webscan\practice_app.py", line 106, in get_order order = ORDERS.get(int(order_id)) ~~~...
+    - What was seen: A bad request (status 500) showed internal details: <pre>Traceback (most recent call last): File "C:\Users\king7\Desktop\Sizo\CyberFox\Further Development and Testing\Webscan\practice_app.py", line 106, in get_order order = ORDERS.get(int(order_id)) ~~...
     - How to fix it: Turn off debug output. Show users a short, generic error and write the details to a private log instead.
 - [FAIL] Replies do not contain passwords or secrets
     - What was seen: Found private-looking fields in replies: internal_api_key, owner_password

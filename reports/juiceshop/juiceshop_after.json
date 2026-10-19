@@ -1,0 +1,125 @@
+{
+  "name": "OWASP Juice Shop",
+  "target": "http://127.0.0.1:3000",
+  "date": "2026-10-19T13:09:04",
+  "summary": {
+    "FAIL": 4,
+    "PASS": 5,
+    "SKIPPED": 3,
+    "INCONCLUSIVE": 4
+  },
+  "checks": [
+    {
+      "group": "Settings and headers",
+      "name": "Content-Security-Policy is set",
+      "status": "FAIL",
+      "seen": "Header 'Content-Security-Policy' is missing.",
+      "fix": "Add a Content-Security-Policy header. It tells the browser which sources of scripts and images are allowed, which helps stop injected code. A simple start is: default-src 'self'."
+    },
+    {
+      "group": "Settings and headers",
+      "name": "Strict-Transport-Security is set",
+      "status": "FAIL",
+      "seen": "Header 'Strict-Transport-Security' is missing.",
+      "fix": "Add a Strict-Transport-Security header (for example max-age=31536000) so browsers always use the secure https version of the website."
+    },
+    {
+      "group": "Settings and headers",
+      "name": "X-Content-Type-Options is nosniff",
+      "status": "PASS",
+      "seen": "X-Content-Type-Options: nosniff",
+      "fix": ""
+    },
+    {
+      "group": "Settings and headers",
+      "name": "Clickjacking protection is set",
+      "status": "PASS",
+      "seen": "X-Frame-Options: SAMEORIGIN",
+      "fix": ""
+    },
+    {
+      "group": "Settings and headers",
+      "name": "Referrer-Policy is set",
+      "status": "FAIL",
+      "seen": "Header 'Referrer-Policy' is missing.",
+      "fix": "Add a Referrer-Policy header (for example no-referrer) so your web addresses are not leaked to other websites."
+    },
+    {
+      "group": "Settings and headers",
+      "name": "Server version is hidden",
+      "status": "PASS",
+      "seen": "No version number found in Server or X-Powered-By.",
+      "fix": ""
+    },
+    {
+      "group": "Cookies",
+      "name": "Cookies are HttpOnly",
+      "status": "SKIPPED",
+      "seen": "No cookie was seen. The login did not work or the website sets no cookie.",
+      "fix": ""
+    },
+    {
+      "group": "Cookies",
+      "name": "Cookies are Secure",
+      "status": "SKIPPED",
+      "seen": "No cookie was seen. The login did not work or the website sets no cookie.",
+      "fix": ""
+    },
+    {
+      "group": "Cookies",
+      "name": "Cookies have SameSite",
+      "status": "SKIPPED",
+      "seen": "No cookie was seen. The login did not work or the website sets no cookie.",
+      "fix": ""
+    },
+    {
+      "group": "Access",
+      "name": "Orders need a login",
+      "status": "INCONCLUSIVE",
+      "seen": "The website answered with a server error (status 500), so the address may not exist or the server failed. This does not show if a login is needed.",
+      "fix": ""
+    },
+    {
+      "group": "Access",
+      "name": "Users cannot read other users' orders",
+      "status": "INCONCLUSIVE",
+      "seen": "The website answered with a server error (status 500), so the address may not exist or the server failed. This does not show if a login is needed.",
+      "fix": ""
+    },
+    {
+      "group": "Access",
+      "name": "Normal users cannot open the admin page",
+      "status": "INCONCLUSIVE",
+      "seen": "The website answered with its normal home page, so this address is not a real page or API address (typical for single-page apps). Try a real address with the matching --*-path option.",
+      "fix": ""
+    },
+    {
+      "group": "Access",
+      "name": "The admin page needs a login",
+      "status": "INCONCLUSIVE",
+      "seen": "The website answered with its normal home page, so this address is not a real page or API address (typical for single-page apps). Try a real address with the matching --*-path option.",
+      "fix": ""
+    },
+    {
+      "group": "Responses",
+      "name": "Login errors do not reveal which users exist",
+      "status": "PASS",
+      "seen": "Both bad logins got the same reply: Invalid email or password.",
+      "fix": ""
+    },
+    {
+      "group": "Responses",
+      "name": "Error pages do not show internal details",
+      "status": "FAIL",
+      "seen": "A bad request (status 500) showed internal details: <html> <head> <meta charset='utf-8'> <title>Error: Unexpected path: /api/orders/not-a-number</title> <style>* { margin: 0; padding: 0; outline: 0; } body { padding: 80px 100px; font: 13px \"Helvetica N...",
+      "fix": "Turn off debug output. Show users a short, generic error and write the details to a private log instead."
+    },
+    {
+      "group": "Responses",
+      "name": "Replies do not contain passwords or secrets",
+      "status": "PASS",
+      "seen": "Checked 8 replies. No password or secret fields found.",
+      "fix": ""
+    }
+  ]
+}
