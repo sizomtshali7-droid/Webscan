@@ -169,3 +169,62 @@ These are problems that came up while building this project. More detail is in [
 ## Licence
 
 Released under the MIT Licence. See [LICENSE](LICENSE).
+
+
+## New in Week 3
+
+### New options
+
+| Option | What it does | Default |
+|---|---|---|
+| `--login-field NAME` | Name of the user field in the login request. Use `email` for Juice Shop. | `username` |
+| `--auth cookie` or `--auth bearer` | How the website keeps you logged in: a cookie, or a token in the login reply. | `cookie` |
+| `--name "TEXT"` | A label for the website, shown in the report. | none |
+| `--json FILE` | Also save the results as a JSON file. | off |
+
+All earlier options (`--user1`, `--order1`, `--order2`, `--login-path`, `--orders-path`, `--admin-path`, `--report`, `--i-have-permission`) work as before.
+
+### Result types
+
+| Result | Meaning |
+|---|---|
+| PASS | The website did the safe thing |
+| FAIL | The website did something unsafe. The report says what was seen and how to fix it |
+| SKIPPED | The check could not run (for example, the login did not work or the website sets no cookie) |
+| INCONCLUSIVE | The check ran, but the answer cannot be trusted. For example, the website showed its normal home page for an address that does not exist, or it returned a server error. Try a real address with `--orders-path` or `--admin-path` |
+
+### Example: scanning OWASP Juice Shop on your own computer
+
+1. Start Juice Shop (see https://github.com/juice-shop/juice-shop) so it runs at `http://127.0.0.1:3000`.
+2. Register a test user in the shop. Use a throwaway email and a password you do not use anywhere else.
+3. Run Webscan (replace `YOURPASSWORD`):
+
+```
+python webscan.py http://127.0.0.1:3000 --login-path /rest/user/login --login-field email --auth bearer --user1 test@example.com:YOURPASSWORD --name "OWASP Juice Shop" --report juiceshop_report.md --json juiceshop.json
+```
+
+The first lines of output show "Logged in with a token" and the user's basket id (for example `6`).
+
+4. To check access control with real Juice Shop addresses, use that basket id:
+
+```
+python webscan.py http://127.0.0.1:3000 --login-path /rest/user/login --login-field email --auth bearer --user1 test@example.com:YOURPASSWORD --orders-path /rest/basket --order1 6 --order2 1 --admin-path /rest/admin/application-configuration --name "OWASP Juice Shop (real API paths)" --report juiceshop_report_paths.md --json juiceshop_paths.json
+```
+
+Never put real passwords in files you upload to GitHub.
+
+### Run the automated tests
+
+```
+python -m unittest discover -s tests -v
+```
+
+You should see `Ran 10 tests` and `OK`. The tests use a tiny fake website on your own computer, so they need no internet and no extra packages.
+
+### Known limits
+
+- Each check tests one address that you choose, so results depend on the addresses you give.
+- The three cookie checks are SKIPPED for websites that do not use cookies to log in.
+- The "single-page app" detection compares pages and can be fooled by pages that change on every visit.
+- Only two applications (the practice website and Juice Shop) have been tested so far.
+- Only scan websites you own or have written permission to test.
