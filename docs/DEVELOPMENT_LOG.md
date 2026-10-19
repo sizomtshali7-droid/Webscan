@@ -99,3 +99,54 @@ The README now uses `python -m pip` everywhere.
 ## Housekeeping
 
 Screenshots were cropped to the Command Prompt, File Explorer, installer or README area only, so they do not show browser tabs or other personal information.
+
+
+## Week 3: Further development and testing (19 October 2026)
+
+**Feedback from Week 2:** Excellent progress. For the future, include another authorized web application for scanning.
+
+### What I did
+
+| Step | What happened |
+|---|---|
+| 1. Picked the second application | Chose OWASP Juice Shop, a training web application made to be insecure. It runs on my own computer, so it is clearly allowed to be scanned. |
+| 2. Tried Docker | Docker was not installed on my computer, and my Windows version (10.0.16299) is old, so I used the Windows download instead. |
+| 3. Used the Windows download instead | Downloaded the Juice Shop Windows build (Node 22). The first unzip failed with "Path too long" because the folder was too deep. Unzipping again into a shorter folder worked. Started it with `npm start`. |
+| 4. Registered a test user | Created `test@example.com` in the shop so Webscan could log in. |
+| 5. First scan | Webscan gave 5 passed, 5 failed, 6 skipped. |
+| 6. Studied the result | Two FAILs looked wrong, and six checks were skipped because the login did not work. |
+| 7. Changed Webscan | See "Changes" below. |
+| 8. Wrote tests | Added `tests/test_webscan.py` (10 tests, all pass). |
+| 9. Scanned again | After the changes: 5 passed, 4 failed, 3 skipped, 4 inconclusive. |
+| 10. Used real addresses | With real Juice Shop addresses for orders and admin: 7 passed, 6 failed, 3 skipped. |
+| 11. Checked Week 2 still works | `run_demo.py` still gives 1 passed / 15 failed (weak) and 16 passed (fixed). |
+| 12. Saved to GitHub | Committed and pushed the code, tests and reports. |
+
+### Problems found in my own tool
+
+1. **Login did not fit Juice Shop.** Webscan sent `username` and looked for a cookie. Juice Shop uses `email` and gives back a token in its reply. Result: 6 checks skipped.
+2. **False FAIL on "Orders need a login".** The address `/api/orders` does not exist in Juice Shop, so it returned a server error (status 500). Webscan counted any answer that was not "denied" as a failure.
+3. **False FAIL on "The admin page needs a login".** Juice Shop is a single-page app. It shows its normal home page (status 200) for any address, so this did not prove the admin area was open.
+
+### Changes to webscan.py
+
+| Change | Why |
+|---|---|
+| `--login-field` | Lets me set the login field name (`email` for Juice Shop) |
+| `--auth bearer` | Lets Webscan log in with a token instead of a cookie |
+| New result **INCONCLUSIVE** | Used when an answer cannot be trusted as yes or no (home page shown for a fake address, or a server error) |
+| Single-page app check | Asks for a page that cannot exist, and remembers what the website shows. If an answer matches it, the check is INCONCLUSIVE |
+| `--name` | Puts a label for the website in the report |
+| `--json FILE` | Also saves the results in JSON |
+| Clearer login messages | Prints why the login failed, and the user's basket id when the website provides it |
+
+The 16 checks and the defaults are unchanged, so the Week 2 practice website results stay the same.
+
+### Decisions
+
+- Kept INCONCLUSIVE separate from SKIPPED. SKIPPED means "could not run". INCONCLUSIVE means "ran, but the answer is not reliable".
+- Did not add cookie checks for token logins. Juice Shop sets no cookie at login, so those three checks stay SKIPPED. Noted as a limit.
+
+
+- Update the README and docs, finish testing, and tidy the code.
+- Prepare the final 5-slide PowerPoint, 2-page report and GitHub link.
