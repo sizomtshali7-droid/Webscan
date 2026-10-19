@@ -90,3 +90,77 @@ Stop the site (Ctrl+C), then repeat with `--mode fixed` and `reports/webscan_rep
 
 - Only the included practice website was tested. Webscan has not been run against OWASP Juice Shop, crAPI or any other site.
 - The practice website was written to match the checks, so the results show that the checks work as designed, not how common these problems are in real websites.
+
+
+## Week 3: further testing (19 October 2026)
+
+### 1. What was tested
+
+| Target | What it is | How it was run |
+|---|---|---|
+| Practice website, weak and fixed versions | The small practice site that comes with Webscan | `python run_demo.py` |
+| OWASP Juice Shop 20.3.0 | A second, independent web application made on purpose to be insecure for learning | Run on my own computer at `http://127.0.0.1:3000` (Windows build, Node 22) |
+
+Only my own computer was scanned. The Juice Shop test account (`test@example.com`) was created by me for this test.
+
+### 2. Automated tests
+
+Command: `python -m unittest discover -s tests -v`
+
+Result: **Ran 10 tests, OK.**
+
+The tests start a tiny fake website on my own computer (it is not Juice Shop). They check that:
+
+| Test | What it proves |
+|---|---|
+| Local addresses are local / other addresses are not | The "own computer only" rule works |
+| A remote website is refused without `--i-have-permission` | Webscan stops and exits with code 2 |
+| Token login works | Webscan can log in with `--auth bearer` |
+| A bad login is skipped, not crashed | Wrong password gives SKIPPED checks, not an error |
+| A single-page app admin address is INCONCLUSIVE, not FAIL | The false FAIL from the first Juice Shop scan is fixed |
+| A server error on the orders address is INCONCLUSIVE, not FAIL | The second false FAIL is fixed |
+| Reading another user's basket is a FAIL | Real access problems are still caught |
+| Missing headers fail and `nosniff` passes | Header checks still work |
+| Reports include the new status and the name | Text and JSON reports have 16 checks and the new fields |
+
+### 3. Check that Week 2 still works
+
+Command: `python run_demo.py`
+
+| Practice website | Result | Same as Week 2? |
+|---|---|---|
+| Weak version | 1 passed, 15 failed, 0 skipped, 0 inconclusive | Yes |
+| Fixed version | 16 passed, 0 failed, 0 skipped, 0 inconclusive | Yes |
+
+### 4. Juice Shop scans
+
+| Scan | Time | Passed | Failed | Skipped | Inconclusive | Report |
+|---|---|---|---|---|---|---|
+| 1. First scan (Week 2 version of Webscan) | 12:18 | 5 | 5 | 6 | 0 | `reports/juiceshop/juiceshop_report_before.md` |
+| 2. After code changes (token login) | 13:09 | 5 | 4 | 3 | 4 | `reports/juiceshop/juiceshop_report_after.md` |
+| 3. Real API addresses | 13:20 | 7 | 6 | 3 | 0 | `reports/juiceshop/juiceshop_report_paths.md` |
+
+Commands for scans 2 and 3 are in the README (replace the password placeholder with your own test password).
+
+### 5. What changed between the scans
+
+| Check | Scan 1 | Scan 2 | Scan 3 |
+|---|---|---|---|
+| Orders need a login | FAIL (false: address does not exist, server error 500) | INCONCLUSIVE | PASS (status 401 without login) |
+| Users cannot read other users' orders | SKIPPED (login failed) | INCONCLUSIVE | **FAIL** (status 200 for basket 1) |
+| Normal users cannot open the admin page | SKIPPED (login failed) | INCONCLUSIVE | **FAIL** (status 200 with configuration data) |
+| The admin page needs a login | FAIL (false: home page returned) | INCONCLUSIVE | **FAIL** (status 200 with configuration data, no login) |
+| Error pages do not show internal details | SKIPPED (login failed) | **FAIL** (server path and error shown) | PASS (this address gave no error page) |
+| 3 header checks (CSP, HSTS, Referrer-Policy) | FAIL | FAIL | FAIL |
+| 3 cookie checks | SKIPPED | SKIPPED | SKIPPED (Juice Shop sets no cookie at login) |
+
+### 6. Checked by hand
+
+- Opening `http://127.0.0.1:3000/api/orders/not-a-number` in Chrome shows a 500 error page with the message "Unexpected path" and a list of file paths from the server. This confirms the "Error pages" FAIL in scan 2 is a true result.
+
+### 7. Limits seen in testing
+
+- The error-page check tests one address only. It failed on `/api/orders/...` but passed on `/rest/basket/...`.
+- The "admin page" address used in scan 3 (`/rest/admin/application-configuration`) is a configuration data address, not an admin screen.
+- Cookie checks cannot run on apps that do not use cookies for login.
+- Two applications have been tested so far.
